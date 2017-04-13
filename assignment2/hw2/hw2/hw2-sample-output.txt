@@ -1,0 +1,249 @@
+goldsd@linux02:~/OS/assignments/hw2/code$ gcc -Wall -Werror hw2.c
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt
+PID 24398: Program started (top-level process)
+PID 24398: Created child process for hw2-input01.txt
+PID 24399: Processing hw2-input01.txt (created three child processes)
+PID 24401: Sent whitespace count of 201 to parent (then exiting)
+PID 24400: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24402: Sent other count of 30 to parent (then exiting)
+PID 24399: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24399: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24398: All files contain 686 alnum, 201 space, and 30 other characters
+PID 24398: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt
+PID 24403: Program started (top-level process)
+PID 24403: Created child process for hw2-input01.txt
+PID 24404: Processing hw2-input01.txt (created three child processes)
+PID 24406: Sent whitespace count of 201 to parent (then exiting)
+PID 24405: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24407: Sent other count of 30 to parent (then exiting)
+PID 24404: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24404: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24403: All files contain 686 alnum, 201 space, and 30 other characters
+PID 24403: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt
+PID 24408: Program started (top-level process)
+PID 24408: Created child process for hw2-input01.txt
+PID 24409: Processing hw2-input01.txt (created three child processes)
+PID 24410: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24411: Sent whitespace count of 201 to parent (then exiting)
+PID 24412: Sent other count of 30 to parent (then exiting)
+PID 24409: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24409: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24408: All files contain 686 alnum, 201 space, and 30 other characters
+PID 24408: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt
+PID 24421: Program started (top-level process)
+PID 24421: Created child process for hw2-input01.txt
+PID 24422: Processing hw2-input01.txt (created three child processes)
+PID 24421: Created child process for hw2-input02.txt
+PID 24423: Processing hw2-input02.txt (created three child processes)
+PID 24424: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24425: Sent whitespace count of 201 to parent (then exiting)
+PID 24422: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24426: Sent other count of 30 to parent (then exiting)
+PID 24422: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24427: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24428: Sent whitespace count of 79339 to parent (then exiting)
+PID 24429: Sent other count of 0 to parent (then exiting)
+PID 24423: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24423: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24421: All files contain 536017 alnum, 79540 space, and 30 other characters
+PID 24421: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt
+PID 24430: Program started (top-level process)
+PID 24430: Created child process for hw2-input01.txt
+PID 24431: Processing hw2-input01.txt (created three child processes)
+PID 24430: Created child process for hw2-input02.txt
+PID 24432: Processing hw2-input02.txt (created three child processes)
+PID 24433: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24434: Sent whitespace count of 201 to parent (then exiting)
+PID 24431: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24436: Sent other count of 30 to parent (then exiting)
+PID 24431: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24435: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24437: Sent whitespace count of 79339 to parent (then exiting)
+PID 24438: Sent other count of 0 to parent (then exiting)
+PID 24432: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24432: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24430: All files contain 536017 alnum, 79540 space, and 30 other characters
+PID 24430: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt
+PID 24439: Program started (top-level process)
+PID 24439: Created child process for hw2-input01.txt
+PID 24441: Processing hw2-input01.txt (created three child processes)
+PID 24439: Created child process for hw2-input02.txt
+PID 24442: Processing hw2-input02.txt (created three child processes)
+PID 24443: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24444: Sent whitespace count of 201 to parent (then exiting)
+PID 24446: Sent other count of 30 to parent (then exiting)
+PID 24441: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24441: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24445: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24447: Sent whitespace count of 79339 to parent (then exiting)
+PID 24448: Sent other count of 0 to parent (then exiting)
+PID 24442: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24442: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24439: All files contain 536017 alnum, 79540 space, and 30 other characters
+PID 24439: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt hw2-input03.txt
+PID 24453: Program started (top-level process)
+PID 24453: Created child process for hw2-input01.txt
+PID 24454: Processing hw2-input01.txt (created three child processes)
+PID 24453: Created child process for hw2-input02.txt
+PID 24455: Processing hw2-input02.txt (created three child processes)
+PID 24453: Created child process for hw2-input03.txt
+PID 24456: Processing hw2-input03.txt (created three child processes)
+PID 24457: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24458: Sent whitespace count of 201 to parent (then exiting)
+PID 24460: Sent other count of 30 to parent (then exiting)
+PID 24454: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24454: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24464: Sent whitespace count of 12462 to parent (then exiting)
+PID 24463: Sent alphanumeric count of 56144 to parent (then exiting)
+PID 24465: Sent other count of 2066 to parent (then exiting)
+PID 24456: File hw2-input03.txt contains 56144 alnum, 12462 space, and 2066 other characters
+PID 24456: Sent hw2-input03.txt counts to parent (then exiting)
+PID 24462: Sent other count of 0 to parent (then exiting)
+PID 24459: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24461: Sent whitespace count of 79339 to parent (then exiting)
+PID 24455: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24455: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24453: All files contain 592161 alnum, 92002 space, and 2096 other characters
+PID 24453: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt hw2-input03.txt
+PID 24466: Program started (top-level process)
+PID 24466: Created child process for hw2-input01.txt
+PID 24467: Processing hw2-input01.txt (created three child processes)
+PID 24466: Created child process for hw2-input02.txt
+PID 24468: Processing hw2-input02.txt (created three child processes)
+PID 24466: Created child process for hw2-input03.txt
+PID 24469: Processing hw2-input03.txt (created three child processes)
+PID 24470: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24472: Sent whitespace count of 201 to parent (then exiting)
+PID 24475: Sent other count of 30 to parent (then exiting)
+PID 24467: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24467: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24474: Sent alphanumeric count of 56144 to parent (then exiting)
+PID 24477: Sent whitespace count of 12462 to parent (then exiting)
+PID 24478: Sent other count of 2066 to parent (then exiting)
+PID 24469: File hw2-input03.txt contains 56144 alnum, 12462 space, and 2066 other characters
+PID 24469: Sent hw2-input03.txt counts to parent (then exiting)
+PID 24471: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24473: Sent whitespace count of 79339 to parent (then exiting)
+PID 24476: Sent other count of 0 to parent (then exiting)
+PID 24468: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24468: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24466: All files contain 592161 alnum, 92002 space, and 2096 other characters
+PID 24466: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt hw2-input03.txt
+PID 24479: Program started (top-level process)
+PID 24479: Created child process for hw2-input01.txt
+PID 24480: Processing hw2-input01.txt (created three child processes)
+PID 24479: Created child process for hw2-input02.txt
+PID 24481: Processing hw2-input02.txt (created three child processes)
+PID 24479: Created child process for hw2-input03.txt
+PID 24482: Processing hw2-input03.txt (created three child processes)
+PID 24483: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24485: Sent whitespace count of 201 to parent (then exiting)
+PID 24488: Sent other count of 30 to parent (then exiting)
+PID 24480: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24480: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24486: Sent alphanumeric count of 56144 to parent (then exiting)
+PID 24490: Sent whitespace count of 12462 to parent (then exiting)
+PID 24491: Sent other count of 2066 to parent (then exiting)
+PID 24482: File hw2-input03.txt contains 56144 alnum, 12462 space, and 2066 other characters
+PID 24482: Sent hw2-input03.txt counts to parent (then exiting)
+PID 24484: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24487: Sent whitespace count of 79339 to parent (then exiting)
+PID 24489: Sent other count of 0 to parent (then exiting)
+PID 24481: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24481: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24479: All files contain 592161 alnum, 92002 space, and 2096 other characters
+PID 24479: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt hw2-input03.txt
+PID 24492: Program started (top-level process)
+PID 24492: Created child process for hw2-input01.txt
+PID 24493: Processing hw2-input01.txt (created three child processes)
+PID 24492: Created child process for hw2-input02.txt
+PID 24494: Processing hw2-input02.txt (created three child processes)
+PID 24492: Created child process for hw2-input03.txt
+PID 24495: Processing hw2-input03.txt (created three child processes)
+PID 24496: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24498: Sent whitespace count of 201 to parent (then exiting)
+PID 24493: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24500: Sent other count of 30 to parent (then exiting)
+PID 24493: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24503: Sent whitespace count of 12462 to parent (then exiting)
+PID 24501: Sent alphanumeric count of 56144 to parent (then exiting)
+PID 24504: Sent other count of 2066 to parent (then exiting)
+PID 24495: File hw2-input03.txt contains 56144 alnum, 12462 space, and 2066 other characters
+PID 24495: Sent hw2-input03.txt counts to parent (then exiting)
+PID 24497: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24499: Sent whitespace count of 79339 to parent (then exiting)
+PID 24502: Sent other count of 0 to parent (then exiting)
+PID 24494: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24494: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24492: All files contain 592161 alnum, 92002 space, and 2096 other characters
+PID 24492: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$ ./a.out hw2-input01.txt hw2-input02.txt hw2-input03.txt
+PID 24505: Program started (top-level process)
+PID 24505: Created child process for hw2-input01.txt
+PID 24506: Processing hw2-input01.txt (created three child processes)
+PID 24505: Created child process for hw2-input02.txt
+PID 24507: Processing hw2-input02.txt (created three child processes)
+PID 24505: Created child process for hw2-input03.txt
+PID 24508: Processing hw2-input03.txt (created three child processes)
+PID 24509: Sent alphanumeric count of 686 to parent (then exiting)
+PID 24510: Sent whitespace count of 201 to parent (then exiting)
+PID 24511: Sent other count of 30 to parent (then exiting)
+PID 24506: File hw2-input01.txt contains 686 alnum, 201 space, and 30 other characters
+PID 24506: Sent hw2-input01.txt counts to parent (then exiting)
+PID 24514: Sent alphanumeric count of 56144 to parent (then exiting)
+PID 24516: Sent whitespace count of 12462 to parent (then exiting)
+PID 24517: Sent other count of 2066 to parent (then exiting)
+PID 24508: File hw2-input03.txt contains 56144 alnum, 12462 space, and 2066 other characters
+PID 24508: Sent hw2-input03.txt counts to parent (then exiting)
+PID 24512: Sent alphanumeric count of 535331 to parent (then exiting)
+PID 24513: Sent whitespace count of 79339 to parent (then exiting)
+PID 24515: Sent other count of 0 to parent (then exiting)
+PID 24507: File hw2-input02.txt contains 535331 alnum, 79339 space, and 0 other characters
+PID 24507: Sent hw2-input02.txt counts to parent (then exiting)
+PID 24505: All files contain 592161 alnum, 92002 space, and 2096 other characters
+PID 24505: Program ended (top-level process)
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
+goldsd@linux02:~/OS/assignments/hw2/code$
