@@ -21,7 +21,6 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <errno.h>
 
 // What sync should be taken care?
 // 1. file system read / write
@@ -38,17 +37,20 @@ struct FileInfo{
 struct FileInfo** fileSystem;
 */
 
-#define BUFFER_SIZE 1024
-#define DEBUG_MODE 1
+#define BUFFER_SIZE 20
+#define MAX_CLIENTS 100      /* <===== */
 
 fd_set readfds;
-typedef unsigned long long ull;
+int client_sockets[MAX_CLIENTS];
+pthread_t tid[MAX_CLIENTS];
+int client_socket_index = 0;
+
 // The operation on the file system is protected by a mutex
 pthread_mutex_t filesystem_reading = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t filesystem_writting = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t clientlist = PTHREAD_MUTEX_INITIALIZER;
 
-int runsave(char filename[] , ull byteCount, char* fileContent, int newsd){
+int runsave(char filename[] , int byteCount, char* fileContent, int newsd){
     // return value: -1 INVALID REQUSET
     //               -2 FILE EXISTS
     //                0 successful
@@ -68,14 +70,14 @@ int runsave(char filename[] , ull byteCount, char* fileContent, int newsd){
     memcpy(fileBuffer, fileContent, j);
     
     // fill the fileBuffer, starting from j
-    ull n = 0;
+    int n = 0;
     char buffer_tmp[BUFFER_SIZE + 1];
     while(j != byteCount)
     {
         /* recv() will block until we receive data (n > 0)
          or there's an error (n == -1)
          or the client closed the socket (n == 0) */
-        n = (ull)recv( newsd, buffer_tmp, BUFFER_SIZE, 0 );
+        n = (int)recv( newsd, buffer_tmp, BUFFER_SIZE, 0 );
         
         if ( n == -1 )
         {
@@ -84,6 +86,7 @@ int runsave(char filename[] , ull byteCount, char* fileContent, int newsd){
         }
         else if ( n == 0 )
         {
+            printf( "SERVER: Rcvd 0 from recv(); closing socket...\n" );
             break;
         }
         else /* n > 0 */
@@ -94,16 +97,18 @@ int runsave(char filename[] , ull byteCount, char* fileContent, int newsd){
         }
     }
     
+    pthread_mutex_lock(&filesystem_reading);
     pthread_mutex_lock(&filesystem_writting);
     FILE *fp;
     fp = fopen( filename , "wb" );
     fwrite(fileContent , sizeof(char), byteCount, fp );
     fclose(fp);
     pthread_mutex_unlock(&filesystem_writting);
+    pthread_mutex_unlock(&filesystem_reading);
     return 0;
 }
 
-int runread(char filename[] , ull byteOffset, ull length, char** fileContent, int newsd){
+int runread(char filename[] , int byteOffset, int length, char** fileContent, int newsd){
     // return value: -1 INVALID REQUSET
     //               -2 NO SUCH FILE
     //               -3 INVALID BYTE RANGE
@@ -136,19 +141,38 @@ int runread(char filename[] , ull byteOffset, ull length, char** fileContent, in
     fread(*fileContent, length, 1, fileptr); // Read in the entire file
     fclose(fileptr); // Close the file
     pthread_mutex_unlock(&filesystem_writting);
-    
     return 0;
 }
 
 int cmpfunc (const void * a, const void * b) {
-    const char* file1 = *(const char **) a;
-    const char* file2 = *(const char **) b;
-    return strcmp(file1, file2);
+    char* file1 = (char *) a;
+    char* file2 = (char *) b;
+    int len1 = (int)strlen(file1);
+    int len2 = (int)strlen(file2);
+    int i = 0, j = 0;
+    while(i < len1 && j < len2) {
+        if(file1[i] - file2[j] > 0) return 1;
+        else if(file1[i] - file2[j] < 0) return -1;
+        else {
+            i++;
+            j++;
+        }
+    }
+    if(i == len1 && j == len2) return 0;
+    if(i == len1) return -1;
+    if(j == len2) return 1;
+    return 0;
 }
 
 
 char** runlist(int* nfiles) {
-    DIR * dir = opendir( "." );   /* open the current working directory */
+    char wkdir[128];
+    memset(wkdir, '\0', 128);
+    getcwd(wkdir, 128);
+    int len = (int)strlen(wkdir);
+    strcpy(&wkdir[len], "/storage");
+    chdir (wkdir);
+    DIR * dir = opendir( "/Users/yixuantan/Developer/os/assignment4/Build/Products/Debug/storage" );   /* open the current working directory */
     
     if ( dir == NULL )
     {
@@ -157,11 +181,11 @@ char** runlist(int* nfiles) {
     }
     
     struct dirent * file;
-    char** filelist = NULL;
+    char** filelist;
     pthread_mutex_lock(&filesystem_writting);
     while ( ( file = readdir( dir ) ) != NULL )
     {
-        if(DEBUG_MODE) printf( "found %s", file->d_name );
+        printf( "found %s", file->d_name );
 
         struct stat buf;
         int rc = lstat( file->d_name, &buf );
@@ -196,16 +220,11 @@ char** runlist(int* nfiles) {
         }
     }
     
-    int i = 0;
-    if(DEBUG_MODE) for(; i < *nfiles; i++) printf("\n%d -th file is %s\n", i, filelist[i]);
     pthread_mutex_unlock(&filesystem_writting);
     closedir( dir );
     if(*nfiles == 0) return NULL;
-    qsort(filelist, *nfiles, sizeof(char*), cmpfunc); // the 3rd arg is size of each element in filelist
-    i = 0;
-    if(DEBUG_MODE) for(; i < *nfiles; i++) printf("%d -th file is %s\n", i, filelist[i]);
-    fflush(NULL);
-    return filelist;
+    //qsort(*filelist, *nfiles, 32 * sizeof(char), cmpfunc);
+    return 0;
 }
 
 
@@ -216,45 +235,41 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
     struct sockaddr_in client;
     int fromlen = sizeof( client );
     int newsd = accept( sd_tcp, (struct sockaddr *)&client, (socklen_t *)&fromlen );
-    ull n;
+    int n;
     char buffer[ BUFFER_SIZE ];
 
-    printf( "Rcvd incoming TCP connection from: %s\n", inet_ntoa( (struct in_addr)client.sin_addr ));
-    fflush(NULL);
-    while(1)
+    printf( "SERVER: Accepted new client connection on sd %d\n", newsd );
+    do
     {
-        if(DEBUG_MODE) printf( "SERVER: Blocked on recv()\n" );
+        printf( "SERVER: Blocked on recv()\n" );
         
         /* recv() will block until we receive data (n > 0)
          or there's an error (n == -1)
          or the client closed the socket (n == 0) */
-        n = (ull)recv( newsd, buffer, BUFFER_SIZE, 0 );
+        n = (int)recv( newsd, buffer, BUFFER_SIZE, 0 );
         
         if ( n == -1 )
         {
             perror( "recv() failed" );
-            fflush(NULL);
-            break;
+            return NULL;
         }
         else if ( n == 0 )
         {
             printf( "[child %lld]: Client disconnected\n", (long long)pthread_self());
-            fflush(NULL);
-            break;
         }
         else /* n > 0 */
         {
             // echo command
-            buffer[n] = '\0';
+            buffer[n] = '\0';    /* assume this is text data */
             char cmd[1024];
-            ull i;
+            int i;
             for(i = 0; i < n; i++) {
                 if(buffer[i] == '\n') break;
                 cmd[i] = buffer[i];
             }
             cmd[i] = '\0';
             printf( "[child %lld]: Received %s\n", (long long)pthread_self(), cmd);
-            fflush(NULL);
+            
             // process command
             char type[5];
             size_t typelen = 4;
@@ -265,15 +280,15 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
             char return_msg[1024]; // store error return message to be sent back to client
             if(strcmp(type, "SAVE") == 0) {
                 char filename[32];
-                ull fi;
+                int fi;
                 for(fi = 5; buffer[fi] != ' '; fi++) filename[fi-5] = buffer[fi];
                 fi++; // skip space;
-                ull byteCount;
+                int byteCount;
                 byteCount = 0;
                 for(; buffer[fi] != '\n'; fi++) byteCount = byteCount * 10 + (buffer[fi] - '0');
                 char filecontent[ BUFFER_SIZE ];
                 fi++;
-                ull fc = 0;
+                int fc = 0;
                 for(; fi < BUFFER_SIZE; fi++) filecontent[fc++] = buffer[fi];
                 filecontent[fc] = '\0';
                 
@@ -293,22 +308,20 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                 else {
                     send( newsd, "ACK\n", 4, 0 );
                     printf( "[child %lld]: Sent ACK\n", (long long)pthread_self());
-                    fflush(NULL);
                 }
             }
             else if(strcmp(type, "READ") == 0) {
                 char filename[32];
-                ull fi;
+                int fi;
                 for(fi = 5; buffer[fi] != ' '; fi++) filename[fi-5] = buffer[fi];
                 fi++; // skip space;
-                ull byteOffset = 0;
+                int byteOffset = 0;
                 for(; buffer[fi] != ' '; fi++) byteOffset = byteOffset * 10 + (buffer[fi] - '0');
-                ull length = 0;
+                int length = 0;
                 fi++; // skip space;
                 for(; buffer[fi] != '\n'; fi++) length = length * 10 + (buffer[fi] - '0');
                 char* fileContent;
                 int rc = runread(filename, byteOffset, length, &fileContent, newsd);
-
                 if(rc == -1) {
                     memset(return_msg, '\0', 1024);
                     strcpy(return_msg, "ERROR INVALID REQUEST\n");
@@ -317,31 +330,14 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                 }
                 else if(rc == -2){
                     memset(return_msg, '\0', 1024);
-                    strcpy(return_msg, "ERROR NO SUCH FILE\n");
+                    strcpy(return_msg, "ERROR FILE EXISTS\n");
                     send( newsd, return_msg, strlen(return_msg), 0 );
-                }
-                else if(rc == -3) {
-                    memset(return_msg, '\0', 1024);
-                    strcpy(return_msg, "ERROR INVALID BYTE RANGE\n");
-                    send( newsd, return_msg, strlen(return_msg), 0 );
+                    //fprintf(stderr, "ERROR FILE EXISTS\n");
                 }
                 else {
-                    memset(return_msg, '\0', 1024);
-                    sprintf(return_msg, "ACK %llu", length);
-                    n = (ull)send( newsd, return_msg, strlen(return_msg), 0 );
-                    printf( "[child %lld]: Sent ACK %llu\n", (long long)pthread_self(), length);
-                    fflush(NULL);
-                    // TEST return image
-                    if(DEBUG_MODE) {
-                        FILE *fp2;
-                        fp2 = fopen( "check.png" , "wb" );
-                        fwrite(fileContent , sizeof(char), length, fp2 );
-                        fclose(fp2);
-                    }
-                    // -----------------
-                    n = (ull)send( newsd, fileContent, length, 0 );
-                    printf( "[child %lld]: Sent %llu bytes of \"%s\" from offset %llu\n", (long long)pthread_self(), length, filename, byteOffset);
-                    fflush(NULL);
+                    n = (int)send( newsd, "ACK\n", 4, 0 );
+                    printf( "[child %lld]: Sent ACK %d\n", (long long)pthread_self(), length);
+                    printf( "[child %lld]: Sent %d bytes of \"%s\" from offset %d\n", (long long)pthread_self(), length, filename, byteOffset);
                     free(fileContent);
                     fileContent = NULL;
                 }
@@ -349,14 +345,13 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
             else if(strcmp(type, "LIST") == 0) {
                 int nfiles = 0;
                 char** filelist = runlist(&nfiles);
-                if(&runlist == NULL) {
+                if(runlist == NULL) {
                     memset(return_msg, '\0', 1024);
                     strcpy(return_msg, "0\n");
                     send( newsd, return_msg, strlen(return_msg), 0 );
                 }
                 else {
                     char *return_list = (char *) malloc( (nfiles + 1) * 33 * sizeof(char));
-                    memset(return_list, '\0', (nfiles + 1) * 33 * sizeof(char));
                     char numOfFiles[16];
                     memset(numOfFiles, '\0', 16);
                     int nfiles_tmp = nfiles;
@@ -374,17 +369,21 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                         numOfFiles[i] = numOfFiles[j];
                         numOfFiles[j] = c;
                     }
+                    
                     // fill number of files
-                    strcat(return_list, numOfFiles);
+                    long long p = 0;
+                    strcpy(&return_list[p], numOfFiles);
+                    p = (long long)strlen(return_list);
+                    return_list[p++] = ' ';
+                    
                     int f = 0;
                     for(; f < nfiles; f++) {
-                        if(DEBUG_MODE) printf("%d -th file is %s\n", f, filelist[f]);
-                        strcat(return_list, " ");
-                        strcat(return_list, filelist[f]);
+                        strcpy(&return_list[p], filelist[f]);
+                        p = (long long)strlen(return_list);
+                        if(f != nfiles - 1) return_list[p++] = ' ';
                     }
-                    printf("return_list is %s\n", return_list);
-
-                    send(newsd, filelist, strlen(return_list), 0);
+                    
+                    send(newsd, filelist, p, 0);
                     
                     // clean the dyna memo
                     f = 0;
@@ -394,10 +393,14 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                     }
                     free(filelist);
                     filelist = NULL;
+                
                 }
             }
+            
         }
+        
     }
+    while ( n > 0 );
     
     close( newsd );
     return NULL;
@@ -415,7 +418,7 @@ void UdpClientHandler(int sd_udp) {
     {
         /* read a datagram from the remote client side (BLOCKING) */
         n = (int)recvfrom( sd_udp, buffer, BUFFER_SIZE, 0, (struct sockaddr *) &client, (socklen_t *) &len );
-        if(DEBUG_MODE) printf("n is %d, sd_udp is %d", n, sd_udp);
+        printf("n is %d, sd_udp is %d", n, sd_udp);
         if ( n < 0 )
         {
             perror( "recvfrom() failed" );
@@ -428,79 +431,16 @@ void UdpClientHandler(int sd_udp) {
         }
         else
         {
-            buffer[n] = '\0';    /* assume this is text data */
-            char cmd[1024];
-            int i;
-            for(i = 0; i < n; i++) {
-                if(buffer[i] == '\n') break;
-                cmd[i] = buffer[i];
-            }
-            cmd[i] = '\0';
-            printf( "[child %lld]: Received %s\n", (long long)pthread_self(), cmd);
+            printf( "Rcvd datagram from %s port %d\n",
+                   inet_ntoa( client.sin_addr ), ntohs( client.sin_port ) );
             
-            // process command
-            char type[5];
-            size_t typelen = 4;
-            strncpy(type, buffer, typelen);
-            //if(rc != typelen) fprintf(stderr, "ERROR: wrong command");
-            type[4] = '\0';
+            printf( "RCVD %d bytes\n", n );
+            buffer[n] = '\0';
+            printf( "RCVD: [%s]\n", buffer );
             
-            char return_msg[1024]; // store error return message to be sent back to client
-            memset(return_msg, '\0', 1024);
-            if(strcmp(type, "LIST") == 0) {
-                int nfiles = 0;
-                char** filelist = runlist(&nfiles);
-                if(&runlist == NULL) {
-                    memset(return_msg, '\0', 1024);
-                    strcpy(return_msg, "0\n");
-                    sendto( sd_udp, return_msg, 2, 0, (struct sockaddr *) &client, len );
-                }
-                else {
-                    char *return_list = (char *) malloc( (nfiles + 1) * 33 * sizeof(char));
-                    memset(return_list, '\0', (nfiles + 1) * 33 * sizeof(char));
-                    char numOfFiles[16];
-                    memset(numOfFiles, '\0', 16);
-                    int nfiles_tmp = nfiles;
-                    int i = 0;
-                    for(; i < 16; i++) {
-                        if(nfiles_tmp == 0) break;
-                        numOfFiles[i] = nfiles_tmp % 10 + '0';
-                        nfiles_tmp /= 10;
-                    }
-                    int j = 0;
-                    i--;
-                    // reverse string
-                    while(i < j) {
-                        char c = numOfFiles[i];
-                        numOfFiles[i] = numOfFiles[j];
-                        numOfFiles[j] = c;
-                    }
-                    // fill number of files
-                    strcat(return_list, numOfFiles);
-                    int f = 0;
-                    for(; f < nfiles; f++) {
-                        if(DEBUG_MODE) printf("%d -th file is %s\n", f, filelist[f]);
-                        strcat(return_list, " ");
-                        strcat(return_list, filelist[f]);
-                    }
-                    if(DEBUG_MODE) printf("return_list is %s\n", return_list);
-                    n = (int)strlen(return_list);
-                    sendto( sd_udp, return_list, n, 0, (struct sockaddr *) &client, len );
-                    // clean the dyna memo
-                    f = 0;
-                    for(; f < nfiles; f++) {
-                        free(filelist[f]);
-                        filelist[f] = NULL;
-                    }
-                    free(filelist);
-                    filelist = NULL;
-                    
-                }
-            }
-            else {
-                n = sprintf(return_msg, "ERROR %s is only supported by TCP", type);
-                sendto( sd_udp, return_msg, n, 0, (struct sockaddr *) &client, len );
-            }
+            /* echo the data back to the sender/client */
+            // sendto( sd_udp, buffer, n, 0, (struct sockaddr *) &client, len );
+            /* to do: check the return code of sendto() */
         }
     }
     
@@ -521,31 +461,6 @@ int main(int argc, char** argv)
     int port_tcp = atoi(argv[1]);
     int port_udp = atoi(argv[2]);
     
-    
-
-    char wkdir[128];
-    memset(wkdir, '\0', 128);
-    getcwd(wkdir, 128);
-    int len = (int)strlen(wkdir);
-    strcpy(&wkdir[len], "/storage");
-    
-    DIR* dir = opendir(wkdir);
-    if (dir)
-    {
-        /* Directory exists. */
-        closedir(dir);
-    }
-    else if (ENOENT == errno)
-    {
-        /* Directory does not exist. */
-        fprintf(stderr, "ERROR: ./storage does not exist\n");
-        return 0;
-    }
-    
-    chdir (wkdir);
-
-    printf("Started server\n");
-    fflush(NULL);
     /* create the socket (endpoint) on the server side */
     int sd_tcp = socket( PF_INET, SOCK_STREAM, 0 );
     int tr=1;
@@ -584,17 +499,15 @@ int main(int argc, char** argv)
     int length_udp = sizeof( server_udp );
     
     listen( sd_tcp, 5 );  /* 5 is number of waiting clients */
-    printf( "Listening for TCP connections on port: %d\n", ntohs( server_tcp.sin_port )  );
-    fflush(NULL);
-    printf( "Listening for UDP datagrams on port: %d\n", ntohs( server_udp.sin_port )  );
-    fflush(NULL);
-    
-    if(DEBUG_MODE)
+    printf( "Listener bound to port %d\n", port_tcp );
+
     if ( getsockname( sd_tcp, (struct sockaddr *) &server_tcp, (socklen_t *) &length_tcp ) < 0 || getsockname( sd_udp, (struct sockaddr *) &server_udp, (socklen_t *) &length_udp ) < 0 )
     {
         perror( "getsockname() failed" );
         return EXIT_FAILURE;
     }
+    
+    printf( "UDP server at port number %d\n", ntohs( server_udp.sin_port ) );
     
     while ( 1 )
     {
@@ -606,28 +519,38 @@ int main(int argc, char** argv)
         FD_SET( sd_tcp, &readfds ); // put in the tcp server file descriptor
         FD_SET( sd_udp, &readfds ); // put in the udp server file descriptor
 
-        if(DEBUG_MODE) printf( "Set FD_SET to include listener fd %d and %d\n", sd_tcp, sd_udp );
+        printf( "Set FD_SET to include listener fd %d and %d\n", sd_tcp, sd_udp );
         
         // blocking until a connection request is received
         int ready = select( FD_SETSIZE, &readfds, NULL, NULL, NULL );
         /* ready is the number of ready file descriptors */
-        if(DEBUG_MODE) printf("ready is %d\n", ready);
-        if(DEBUG_MODE)
+        printf("ready is %d\n", ready);
         if ( ready == 0 ) {
-            printf( "ERROR: No activity\n" );
+            printf( "No activity\n" );
             continue;
         }
-        if(DEBUG_MODE) printf( "select() identified %d descriptor(s) with activity\n", ready );
+        printf( "select() identified %d descriptor(s) with activity\n", ready );
         
         if ( FD_ISSET( sd_tcp, &readfds ) ) {
-            pthread_t tid;
-            int rc = pthread_create( &tid, NULL, TcpClientHandler, &sd_tcp );
+            int nthsocket;
+            pthread_mutex_lock(&clientlist);
+            nthsocket = client_socket_index;
+            client_socket_index++;
+            pthread_mutex_unlock(&clientlist);
+            
+            int rc = pthread_create( &tid[nthsocket], NULL, TcpClientHandler, &sd_tcp );
             
             if ( rc != 0 ) {
-                fprintf( stderr, "ERROR: Could not create child thread (%d)\n", rc );
+                fprintf( stderr, "MAIN: Could not create child thread (%d)\n", rc );
             }
         }
         if ( FD_ISSET( sd_udp, &readfds ) ) {
+            //int nthsocket;
+            //pthread_mutex_lock(&clientlist);
+            //nthsocket = client_socket_index;
+            //client_socket_index++;
+            //pthread_mutex_unlock(&clientlist);
+
             UdpClientHandler(sd_udp);
         }
     }
