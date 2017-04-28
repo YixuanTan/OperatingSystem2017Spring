@@ -14,10 +14,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-               BuildableName = "assign4_client_test_c"
-               BlueprintName = "assign4_client_test_c"
-               ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+               BlueprintIdentifier = "9CC954241EB2E346004A085B"
+               BuildableName = "sliding_window_median"
+               BlueprintName = "sliding_window_median"
+               ReferencedContainer = "container:sliding_window_median.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-            BuildableName = "assign4_client_test_c"
-            BlueprintName = "assign4_client_test_c"
-            ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+            BlueprintIdentifier = "9CC954241EB2E346004A085B"
+            BuildableName = "sliding_window_median"
+            BlueprintName = "sliding_window_median"
+            ReferencedContainer = "container:sliding_window_median.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -55,10 +55,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-            BuildableName = "assign4_client_test_c"
-            BlueprintName = "assign4_client_test_c"
-            ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+            BlueprintIdentifier = "9CC954241EB2E346004A085B"
+            BuildableName = "sliding_window_median"
+            BlueprintName = "sliding_window_median"
+            ReferencedContainer = "container:sliding_window_median.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <AdditionalOptions>
@@ -74,10 +74,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-            BuildableName = "assign4_client_test_c"
-            BlueprintName = "assign4_client_test_c"
-            ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+            BlueprintIdentifier = "9CC954241EB2E346004A085B"
+            BuildableName = "sliding_window_median"
+            BlueprintName = "sliding_window_median"
+            ReferencedContainer = "container:sliding_window_median.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

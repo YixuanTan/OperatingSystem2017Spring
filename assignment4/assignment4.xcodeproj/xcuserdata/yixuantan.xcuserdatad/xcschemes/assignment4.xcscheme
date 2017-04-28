@@ -14,10 +14,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-               BuildableName = "assign4_client_test_c"
-               BlueprintName = "assign4_client_test_c"
-               ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+               BlueprintIdentifier = "9CCE479D1EA03E07008DA192"
+               BuildableName = "assignment4"
+               BlueprintName = "assignment4"
+               ReferencedContainer = "container:assignment4.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-            BuildableName = "assign4_client_test_c"
-            BlueprintName = "assign4_client_test_c"
-            ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+            BlueprintIdentifier = "9CCE479D1EA03E07008DA192"
+            BuildableName = "assignment4"
+            BlueprintName = "assignment4"
+            ReferencedContainer = "container:assignment4.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -55,13 +55,62 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-            BuildableName = "assign4_client_test_c"
-            BlueprintName = "assign4_client_test_c"
-            ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+            BlueprintIdentifier = "9CCE479D1EA03E07008DA192"
+            BuildableName = "assignment4"
+            BlueprintName = "assignment4"
+            ReferencedContainer = "container:assignment4.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "9050"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "9051"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "9095"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <AdditionalOptions>
+         <AdditionalOption
+            key = "MallocStackLogging"
+            value = ""
+            isEnabled = "YES">
+         </AdditionalOption>
+         <AdditionalOption
+            key = "DYLD_PRINT_LIBRARIES"
+            value = ""
+            isEnabled = "YES">
+         </AdditionalOption>
+         <AdditionalOption
+            key = "DYLD_INSERT_LIBRARIES"
+            value = "/usr/lib/libgmalloc.dylib"
+            isEnabled = "YES">
+         </AdditionalOption>
+         <AdditionalOption
+            key = "DYLD_PRINT_APIS"
+            value = ""
+            isEnabled = "YES">
+         </AdditionalOption>
+         <AdditionalOption
+            key = "NSZombieEnabled"
+            value = "YES"
+            isEnabled = "YES">
+         </AdditionalOption>
+         <AdditionalOption
+            key = "MallocGuardEdges"
+            value = ""
+            isEnabled = "YES">
+         </AdditionalOption>
+         <AdditionalOption
+            key = "MallocScribble"
+            value = ""
+            isEnabled = "YES">
+         </AdditionalOption>
       </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
@@ -74,10 +123,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CC953FE1EAD0DBB004A085B"
-            BuildableName = "assign4_client_test_c"
-            BlueprintName = "assign4_client_test_c"
-            ReferencedContainer = "container:assign4_client_test_c.xcodeproj">
+            BlueprintIdentifier = "9CCE479D1EA03E07008DA192"
+            BuildableName = "assignment4"
+            BlueprintName = "assignment4"
+            ReferencedContainer = "container:assignment4.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

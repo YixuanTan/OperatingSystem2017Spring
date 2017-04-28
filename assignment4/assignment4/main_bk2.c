@@ -27,6 +27,16 @@
 // 1. file system read / write
 // 2. when read, write(to the same file) is prohibited, read is fine
 // 3. when write, read and write (to the same file) are prohibited
+// 4. when spawning a new thread, the client_sockets[] should be protected by mutex
+// So, every file should have a mutex
+
+/*
+struct FileInfo{
+    pthread_mutex_t fileMutex;
+    char filename[32];
+};
+struct FileInfo** fileSystem;
+*/
 
 #define BUFFER_SIZE 1024
 #define DEBUG_MODE 0
@@ -34,40 +44,43 @@
 fd_set readfds;
 typedef unsigned long long ull;
 // The operation on the file system is protected by a mutex
+//pthread_mutex_t filesystem_reading = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t filesystem_writting = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t clientlist = PTHREAD_MUTEX_INITIALIZER;
 
-int runsave(char filename[] , ull byteCount, char buffer_tmp[], ull currsize, int newsd){
+int runsave(char filename[] , ull byteCount, char* fileContent, ull currsize, int newsd){
     // return value: -1 INVALID REQUSET
     //               -2 FILE EXISTS
     //                0 successful
     // now the filename is valid
-    if(byteCount <= 0) return -1;
+    int ret = 0;
+    if(byteCount <= 0) return ret = -1;
     int len = (int)strlen(filename);
     int i;
     for(i = 0; i < len; i++) {
-        if(i == 0 && isalpha(filename[i]) == 0) return -1;
-        if(isalnum(filename[i]) == 0 && filename[i] != '.') return -1;
+        if(i == 0 && isalpha(filename[i]) == 0) ret = -1;
+        if(isalnum(filename[i]) == 0 && filename[i] != '.') ret = -1;
+    }
+    pthread_mutex_lock(&filesystem_writting);
+    if (access(filename, F_OK) != -1) ret = -2;    // store file
+    pthread_mutex_unlock(&filesystem_writting);
+    char* fileBuffer = NULL;
+    if(ret == 0) { // if there is no error
+        fileBuffer = (char *)malloc((byteCount + 1)*sizeof(char));
+        memset(fileBuffer, '\0', byteCount);
+        memcpy(fileBuffer, fileContent, currsize);
     }
     
-    pthread_mutex_lock(&filesystem_writting);
-    if (access(filename, F_OK) != -1) {
-        pthread_mutex_unlock(&filesystem_writting);
-        return -2;    // store file
-    } else {
-        pthread_mutex_unlock(&filesystem_writting);
-    }
-    
-    
-    // iterative write the content to disk
-    pthread_mutex_lock(&filesystem_writting);
-    FILE *fp;
-    fp = fopen( filename , "wb" );
-    if(currsize > 0) fwrite(buffer_tmp , sizeof(char), currsize, fp );
-
+    // fill the fileBuffer, starting from j
+    ull n = 0;
+    char buffer_tmp[BUFFER_SIZE + 1];
     while(currsize < byteCount)
     {
-        memset(buffer_tmp, '\0', BUFFER_SIZE);
-        int n = (int)recv( newsd, buffer_tmp, BUFFER_SIZE, 0 );
+        /* recv() will block until we receive data (n > 0)
+         or there's an error (n == -1)
+         or the client closed the socket (n == 0) */
+        memset(buffer_tmp, '\0', BUFFER_SIZE + 1);
+        n = (ull)recv( newsd, buffer_tmp, BUFFER_SIZE, 0 );
         
         if ( n == -1 )
         {
@@ -80,19 +93,27 @@ int runsave(char filename[] , ull byteCount, char buffer_tmp[], ull currsize, in
         }
         else /* n > 0 */
         {
-            int wn = (int)fwrite(buffer_tmp , sizeof(char), n, fp );
-            currsize += wn;
+            buffer_tmp[n] = '\0';    /* assume this is text data */
+            if(ret == 0) memcpy(&fileBuffer[currsize], buffer_tmp, n); // copy when there is no error
+            currsize += n;
         }
     }
+    
+    if(ret != 0) return ret;
+    
+    pthread_mutex_lock(&filesystem_writting);
+    FILE *fp;
+    fp = fopen( filename , "wb" );
+    fwrite(fileBuffer , sizeof(char), byteCount, fp );
     fclose(fp);
     pthread_mutex_unlock(&filesystem_writting);
-
-    printf("[child %lld] Stored file \"%s\" (%llu bytes)\n", (long long)pthread_self(), filename, currsize);
+    free(fileBuffer);
+    printf("[child %lld] Stored file \"%s\" (%llu bytes)\n", (long long)pthread_self(), filename, byteCount);
     fflush(stdout);
-    return 0;
+    return ret;
 }
 
-int runread(char filename[] , ull byteOffset, ull length, int newsd){
+int runread(char filename[] , ull byteOffset, ull length, char** fileContent, int newsd){
     // return value: -1 INVALID REQUSET
     //               -2 NO SUCH FILE
     //               -3 INVALID BYTE RANGE
@@ -110,41 +131,21 @@ int runread(char filename[] , ull byteOffset, ull length, int newsd){
     
     // read file to fileContent
     // http://stackoverflow.com/questions/22059189/read-a-file-as-byte-array
+    pthread_mutex_lock(&filesystem_writting);
+    
     FILE *fileptr;
     long filelen;
     fileptr = fopen(filename, "rb");  // Open the file in binary mode
     fseek(fileptr, 0, SEEK_END);          // Jump to the end of the file
     filelen = ftell(fileptr);             // Get the current byte offset in the file
     rewind(fileptr);                      // Jump back to the beginning of the file
+    
     if(length > filelen - byteOffset) return -3;
-    
-    // ACK
-    char return_msg[1024];
-    memset(return_msg, '\0', 1024);
-    sprintf(return_msg, "ACK %llu\n", length);
-    send( newsd, return_msg, strlen(return_msg), 0 );
-    printf( "[child %lld] Sent ACK %llu\n", (long long)pthread_self(), length);
-    fflush(stdout);
-    
-    // iteratively read file block and send to client immediately
-    char buffer[BUFFER_SIZE];
-    ull count = 0;
-    ull originOffset = byteOffset;
-    while(count < length) {
-        fseek(fileptr, byteOffset, SEEK_SET);
-        memset(buffer, '\0', BUFFER_SIZE);
-        ull readsize = (length - count >= BUFFER_SIZE ? BUFFER_SIZE : length - count);
-        int rn = (int)fread(buffer, sizeof(char), readsize, fileptr); // Read in the entire file
-        send( newsd, buffer, rn, 0 );
-        count += rn;
-        byteOffset += rn;
-        rewind(fileptr);
-    }
-    
+    fseek(fileptr, byteOffset, SEEK_SET);
+    *fileContent = (char *)malloc((length + 1)*sizeof(char)); // Enough memory for length + \0
+    fread(*fileContent, length, 1, fileptr); // Read in the entire file
     fclose(fileptr); // Close the file
-    
-    printf( "[child %lld] Sent %llu bytes of \"%s\" from offset %llu\n", (long long)pthread_self(), count, filename, originOffset);
-    fflush(stdout);
+    pthread_mutex_unlock(&filesystem_writting);
     
     return 0;
 }
@@ -225,7 +226,7 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
     struct sockaddr_in client;
     int fromlen = sizeof( client );
     int newsd = accept( sd_tcp, (struct sockaddr *)&client, (socklen_t *)&fromlen );
-    int n;
+    ull n;
     char buffer[ BUFFER_SIZE ];
 
     printf( "Rcvd incoming TCP connection from: %s\n", inet_ntoa( (struct in_addr)client.sin_addr ));
@@ -237,8 +238,8 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
         /* recv() will block until we receive data (n > 0)
          or there's an error (n == -1)
          or the client closed the socket (n == 0) */
-        n = (int)recv( newsd, buffer, BUFFER_SIZE, 0 );
-        int recvn = n;
+        n = (ull)recv( newsd, buffer, BUFFER_SIZE, 0 );
+        
         if ( n == -1 )
         {
             perror( "recv() failed" );
@@ -247,10 +248,13 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
         }
         else if ( n == 0 )
         {
+            printf( "[child %lld] Client disconnected\n", (long long)pthread_self());
+            fflush(stdout);
             break;
         }
         else /* n > 0 */
         {
+            // echo command
             buffer[n] = '\0';
             char cmd[1024];
             ull i;
@@ -279,10 +283,12 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                 byteCount = 0;
                 for(; buffer[fi] != '\n'; fi++) byteCount = byteCount * 10 + (buffer[fi] - '0');
                 fi++;
-                char filecontent[ BUFFER_SIZE];
+                char filecontent[ BUFFER_SIZE ];
                 memset(filecontent, '\0', BUFFER_SIZE);
-                ull fc = recvn - fi >= byteCount ? byteCount : recvn - fi;
+                ull fc = BUFFER_SIZE - fi >= byteCount ? byteCount : BUFFER_SIZE - fi;
                 memcpy(filecontent, &buffer[fi], fc);
+                //for(; fi < BUFFER_SIZE; fi++) filecontent[fc++] = buffer[fi];
+                //filecontent[fc] = '\0';
                 
                 int rc = runsave(filename, byteCount, filecontent, fc, newsd);
                 if(rc == -1) {
@@ -317,7 +323,8 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                 ull length = 0;
                 fi++; // skip space;
                 for(; buffer[fi] != '\n'; fi++) length = length * 10 + (buffer[fi] - '0');
-                int rc = runread(filename, byteOffset, length, newsd);
+                char* fileContent;
+                int rc = runread(filename, byteOffset, length, &fileContent, newsd);
 
                 if(rc == -1) {
                     memset(return_msg, '\0', 1024);
@@ -343,6 +350,31 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                     printf("[child %lld] Sent ERROR INVALID BYTE RANGE\n", (long long)pthread_self());
                     fflush(stdout);
                 }
+                else {
+                    memset(return_msg, '\0', 1024);
+                    sprintf(return_msg, "ACK %llu", length);
+                    ull read_return_size = strlen(return_msg) + length;
+                    char *read_return = (char *)malloc( read_return_size * sizeof(char));
+                    memcpy(read_return, return_msg, strlen(return_msg));
+                    memcpy(&read_return[strlen(return_msg)], fileContent, length);
+                    n = (ull)send( newsd, read_return, read_return_size, 0 );
+                    printf( "[child %lld] Sent ACK %llu\n", (long long)pthread_self(), length);
+                    fflush(stdout);
+                    free(read_return);
+                    // TEST return image
+                    if(DEBUG_MODE) {
+                        FILE *fp2;
+                        fp2 = fopen( "check.png" , "wb" );
+                        fwrite(fileContent , sizeof(char), length, fp2 );
+                        fclose(fp2);
+                    }
+                    // -----------------
+                    //n = (ull)send( newsd, fileContent, length, 0 );
+                    printf( "[child %lld] Sent %llu bytes of \"%s\" from offset %llu\n", (long long)pthread_self(), length, filename, byteOffset);
+                    fflush(stdout);
+                    free(fileContent);
+                    fileContent = NULL;
+                }
             }
             else if(strcmp(type, "LIST") == 0) {
                 int nfiles = 0;
@@ -350,7 +382,7 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                 if(filelist == NULL) {
                     memset(return_msg, '\0', 1024);
                     strcpy(return_msg, "0\n");
-                    n = (int)send( newsd, return_msg, strlen(return_msg), 0 );
+                    n = (ull)send( newsd, return_msg, strlen(return_msg), 0 );
                 }
                 else {
                     char *return_list = (char *) malloc( (nfiles + 1) * 33 * sizeof(char));
@@ -381,9 +413,8 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
                         strcat(return_list, filelist[f]);
                     }
                     strcat(return_list, "\n");
-                    n = (int)send(newsd, return_list, strlen(return_list), 0);
-                    printf( "[child %lld] Sent %s", (long long)pthread_self(), return_list);
-                    fflush(stdout);
+                    n = (ull)send(newsd, return_list, strlen(return_list), 0);
+                    printf( "[child %lld] Sent %s\n", (long long)pthread_self(), return_list);
                     // clean the dyna memo
                     f = 0;
                     for(; f < nfiles; f++) {
@@ -396,8 +427,7 @@ void* TcpClientHandler(void* TcpClientHandlerArg) {
             }
         }
     }
-    printf( "[child %lld] Client disconnected\n", (long long)pthread_self());
-    fflush(stdout);
+    
     close( newsd );
     return NULL;
 }
@@ -413,96 +443,106 @@ void UdpClientHandler(int sd_udp) {
     {
         perror( "getsockname() failed" );
     }
-    
-    fflush(stdout);
     printf( "Rcvd incoming UDP datagram from: %s\n", inet_ntoa( (struct in_addr)client.sin_addr ));
     
-    /* read a datagram from the remote client side (BLOCKING) */
-    n = (int)recvfrom( sd_udp, buffer, BUFFER_SIZE, 0, (struct sockaddr *) &client, (socklen_t *) &len );
-    if(DEBUG_MODE) printf("n is %d, sd_udp is %d", n, sd_udp);
-    if ( n < 0 )
+    fflush(stdout);
+
+    while(1)
     {
-        perror( "recvfrom() failed" );
-    }
-    else if (n > 0)
-    {
-        buffer[n] = '\0';    /* assume this is text data */
-        char cmd[1024];
-        int i;
-        for(i = 0; i < n; i++) {
-            if(buffer[i] == '\n') break;
-            cmd[i] = buffer[i];
+        /* read a datagram from the remote client side (BLOCKING) */
+        n = (int)recvfrom( sd_udp, buffer, BUFFER_SIZE, 0, (struct sockaddr *) &client, (socklen_t *) &len );
+        if(DEBUG_MODE) printf("n is %d, sd_udp is %d", n, sd_udp);
+        if ( n < 0 )
+        {
+            perror( "recvfrom() failed" );
+            break;
         }
-        cmd[i] = '\0';
-        printf("Received %s\n", cmd);
-        fflush(stdout);
-        // process command
-        char type[5];
-        size_t typelen = 4;
-        strncpy(type, buffer, typelen);
-        //if(rc != typelen) fprintf(stderr, "ERROR: wrong command");
-        type[4] = '\0';
-        
-        char return_msg[1024]; // store error return message to be sent back to client
-        memset(return_msg, '\0', 1024);
-        if(strcmp(type, "LIST") == 0) {
-            int nfiles = 0;
-            char** filelist = runlist(&nfiles);
-            if(filelist == NULL) {
-                memset(return_msg, '\0', 1024);
-                strcpy(return_msg, "0\n");
-                sendto( sd_udp, return_msg, 2, 0, (struct sockaddr *) &client, len );
+        else if ( n == 0 )
+        {
+            printf( "Client disconnected\n" );
+            break;
+        }
+        else
+        {
+            buffer[n] = '\0';    /* assume this is text data */
+            char cmd[1024];
+            int i;
+            for(i = 0; i < n; i++) {
+                if(buffer[i] == '\n') break;
+                cmd[i] = buffer[i];
+            }
+            cmd[i] = '\0';
+            printf( "Received %s\n", cmd);
+            fflush(stdout);
+            // process command
+            char type[5];
+            size_t typelen = 4;
+            strncpy(type, buffer, typelen);
+            //if(rc != typelen) fprintf(stderr, "ERROR: wrong command");
+            type[4] = '\0';
+            
+            char return_msg[1024]; // store error return message to be sent back to client
+            memset(return_msg, '\0', 1024);
+            if(strcmp(type, "LIST") == 0) {
+                int nfiles = 0;
+                char** filelist = runlist(&nfiles);
+                if(filelist == NULL) {
+                    memset(return_msg, '\0', 1024);
+                    strcpy(return_msg, "0\n");
+                    sendto( sd_udp, return_msg, 2, 0, (struct sockaddr *) &client, len );
+                }
+                else {
+                    char *return_list = (char *) malloc( (nfiles + 1) * 33 * sizeof(char));
+                    memset(return_list, '\0', (nfiles + 1) * 33 * sizeof(char));
+                    char numOfFiles[16];
+                    memset(numOfFiles, '\0', 16);
+                    int nfiles_tmp = nfiles;
+                    int i = 0;
+                    for(; i < 16; i++) {
+                        if(nfiles_tmp == 0) break;
+                        numOfFiles[i] = nfiles_tmp % 10 + '0';
+                        nfiles_tmp /= 10;
+                    }
+                    int j = 0;
+                    i--;
+                    // reverse string
+                    while(i < j) {
+                        char c = numOfFiles[i];
+                        numOfFiles[i] = numOfFiles[j];
+                        numOfFiles[j] = c;
+                    }
+                    // fill number of files
+                    strcat(return_list, numOfFiles);
+                    int f = 0;
+                    for(; f < nfiles; f++) {
+                        if(DEBUG_MODE) printf("%d -th file is %s\n", f, filelist[f]);
+                        strcat(return_list, " ");
+                        strcat(return_list, filelist[f]);
+                    }
+                    strcat(return_list, "\n");
+                    if(DEBUG_MODE) printf("return_list is %s\n", return_list);
+                    n = (int)strlen(return_list);
+                    sendto( sd_udp, return_list, n, 0, (struct sockaddr *) &client, len );
+                    printf( "Sent %s\n", return_list);
+                    fflush(stdout);
+                    // clean the dyna memo
+                    f = 0;
+                    for(; f < nfiles; f++) {
+                        free(filelist[f]);
+                        filelist[f] = NULL;
+                    }
+                    free(filelist);
+                    filelist = NULL;
+                    
+                }
             }
             else {
-                char *return_list = (char *) malloc( (nfiles + 1) * 33 * sizeof(char));
-                memset(return_list, '\0', (nfiles + 1) * 33 * sizeof(char));
-                char numOfFiles[16]; // assume number of files < 1e17, which is absolutely reasonable
-                memset(numOfFiles, '\0', 16);
-                int nfiles_tmp = nfiles;
-                int i = 0;
-                for(; i < 16; i++) {
-                    if(nfiles_tmp == 0) break;
-                    numOfFiles[i] = nfiles_tmp % 10 + '0';
-                    nfiles_tmp /= 10;
-                }
-                int j = 0;
-                i--;
-                // reverse string
-                while(i < j) {
-                    char c = numOfFiles[i];
-                    numOfFiles[i] = numOfFiles[j];
-                    numOfFiles[j] = c;
-                }
-                // fill number of files
-                strcat(return_list, numOfFiles);
-                int f = 0;
-                for(; f < nfiles; f++) {
-                    if(DEBUG_MODE) printf("%d -th file is %s\n", f, filelist[f]);
-                    strcat(return_list, " ");
-                    strcat(return_list, filelist[f]);
-                }
-                strcat(return_list, "\n");
-                if(DEBUG_MODE) printf("return_list is %s", return_list);
-                n = (int)strlen(return_list);
-                sendto( sd_udp, return_list, n, 0, (struct sockaddr *) &client, len );
-                printf( "Sent %s", return_list);
-                fflush(stdout);
-                // clean the dyna memo
-                f = 0;
-                for(; f < nfiles; f++) {
-                    free(filelist[f]);
-                    filelist[f] = NULL;
-                }
-                free(filelist);
-                filelist = NULL;
-                
+                n = sprintf(return_msg, "ERROR %s is only supported by TCP", type);
+                sendto( sd_udp, return_msg, n, 0, (struct sockaddr *) &client, len );
             }
         }
-        else {
-            n = sprintf(return_msg, "ERROR %s is only supported by TCP", type);
-            sendto( sd_udp, return_msg, n, 0, (struct sockaddr *) &client, len );
-        }
     }
+    
 }
 
 
@@ -520,6 +560,8 @@ int main(int argc, char** argv)
     int port_tcp = atoi(argv[1]);
     int port_udp = atoi(argv[2]);
     
+    
+
     char wkdir[1024];
     memset(wkdir, '\0', 1024);
     getcwd(wkdir, 1024);

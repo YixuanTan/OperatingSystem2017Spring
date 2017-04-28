@@ -35,7 +35,6 @@ try:
     data = sock.recv(1024)
     amount_received += len(data)
     print >>sys.stderr, 'received %s' % data
-    
 
     message = 'READ a.txt 3 10\n'
     print >>sys.stderr, 'sending %s' % message
